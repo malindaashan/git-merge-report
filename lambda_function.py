@@ -8,6 +8,7 @@ import jwt
 import openpyxl
 import requests
 from botocore.exceptions import ClientError
+from dateutil.relativedelta import relativedelta
 
 GIT_API_BASE_URL = 'https://api.github.com'
 API_BASE_URL = "https://public-api.eu.drata.com"
@@ -19,8 +20,7 @@ FILE_SAVE_BASE_PATH = '/tmp/'
 
 def lambda_handler(event, context):
     token = get_token_git_app()
-    config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main", "start_date": "2024-08-01",
-                    "end_date": "2024-08-30", "workspace_id": 12323, " evidence_id": 234234}]
+    config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main", "workspace_id": 12323, " evidence_id": 234234}]
     for config in config_json:
         repo_details = get_branch_config_details(token, config)
         pr_logs = fetch_pull_requests(token, config)
@@ -53,7 +53,6 @@ def get_branch_config_details(token, config):
     print(f'protection_info extracted with status code:{protection_response.status_code}\n')
     protection_info = protection_response.json()
 
-
     # Extract required protection details
     required_reviews = protection_info.get('required_pull_request_reviews', {})
     required_approving_review_count = required_reviews.get('required_approving_review_count', 0)
@@ -79,15 +78,12 @@ def get_branch_config_details(token, config):
 def fetch_pull_requests(token, config, state='all'):
     owner = config.get('owner')
     repo = config.get('project')
-    start_date = config.get('start_date')
-    end_date = config.get('end_date')
 
-    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
-
-    since = start_date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    until = end_date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+    current_time = datetime.now()
+    one_month_ago = current_time - relativedelta(months=1)
+    print("Pull requests extracted from "+current_time.strftime('%Y-%m-%d %H:%M:%S')+" to "+one_month_ago.strftime('%Y-%m-%d %H:%M:%S'))
+    until = current_time
+    since = one_month_ago
 
     url = f"{GIT_API_BASE_URL}/repos/{owner}/{repo}/pulls"
     headers = {
@@ -425,8 +421,7 @@ def get_token_git_app():
 
 
 # token = get_token_git_app()
-# config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main", "start_date": "2024-08-01",
-#                 "end_date": "2024-08-30"}]
+# config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main"}]
 # for config in config_json:
 #     repo_details = get_branch_config_details(token, config)
 #     pr_logs = fetch_pull_requests(token, config)
