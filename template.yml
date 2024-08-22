@@ -6,9 +6,14 @@ Resources:
         Properties:
             Handler: lambda_function.lambda_handler
             Runtime: python3.12
-            #CodeUri: .aws-sam.GitReport
+           # CodeUri: .aws-sam.GitReport
             MemorySize: 512
             Timeout: 60
             Policies:
                 - AWSLambdaBasicExecutionRole
                 - SecretsManagerReadWrite
+            Events:
+                ScheduledEvent:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(0 0 1 * ? *)
