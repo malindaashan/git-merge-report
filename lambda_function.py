@@ -107,6 +107,7 @@ def fetch_pull_requests(token, config, state='all'):
             break
 
         for pr in response_data:
+            print(pr)
 
             created_at = datetime.strptime(pr['created_at'], '%Y-%m-%dT%H:%M:%SZ')
 
@@ -121,7 +122,7 @@ def fetch_pull_requests(token, config, state='all'):
             base_repo_json = base_json.get('repo')
             merge_user_json = pr.get('user')
 
-            commit_message = get_commit_message(token, owner, repo, pr.get('merge_commit_sha'))
+            commit_message = get_commit_message(token, owner, repo, pr.get('head').get('sha'))
             latest_reviews = get_latest_reviews(token, owner, repo, pr.get('number'))
             latest_comments = get_latest_comments(token, pr.get('comments_url'))
 
