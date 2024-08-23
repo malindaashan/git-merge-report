@@ -11,11 +11,12 @@ from botocore.exceptions import ClientError
 from dateutil.relativedelta import relativedelta
 
 GIT_API_BASE_URL = 'https://api.github.com'
-API_BASE_URL = "https://public-api.eu.drata.com"
+GIT_UI_BASE_URL = 'https://github.com'
+DRATA_API_BASE_URL = "https://public-api.eu.drata.com"
 OWNER_ID = 'your_owner_id'
 SOURCE_TYPE = 'your_source_type'
 RENEWAL_SCHEDULE_TYPE = 'your_renewal_schedule_type'
-FILE_SAVE_BASE_PATH = '/tmp/'
+FILE_SAVE_BASE_PATH = ''
 
 
 def lambda_handler(event, context):
@@ -122,7 +123,7 @@ def fetch_pull_requests(token, config, state='all'):
 
             commit_message = get_commit_message(token, owner, repo, pr.get('merge_commit_sha'))
             latest_reviews = get_latest_reviews(token, owner, repo, pr.get('number'))
-            latest_comments = get_latest_comments(token, pr.get('review_comments_url'))
+            latest_comments = get_latest_comments(token, pr.get('comments_url'))
 
             all_comments = ''
             for comment in latest_comments:
@@ -136,7 +137,7 @@ def fetch_pull_requests(token, config, state='all'):
 
             pull_requests.append({
                 'number': pr['number'],
-                'title': pr['title'],
+                'title': pr['merge_commit_sha'],
                 'url': pr['url'],
                 'body': pr['body'],
                 'created_at': pr['created_at'],
@@ -175,7 +176,7 @@ def get_commit_message(token, owner, repo, commit_sha):
     # Check if the request was successful
     if response.status_code == 200:
         commit_data = response.json()
-        commit_message = commit_data['commit']['message']
+        commit_message = commit_data['sha']
         return commit_message
     else:
         return f'Error in get_commit_message: {response.status_code} - {response.text}\n'
@@ -280,16 +281,16 @@ def create_xlsx_update_evidence(repo_details, pr_logs, config):
 
     for i, (pr_json) in enumerate(pr_logs_json, start=2):  # Start at row 2
         sheet2[f'A{i}'] = pr_json.get('number')
-        sheet2[f'B{i}'] = pr_json.get('url')
+        sheet2[f'B{i}'] = pr_json.get('url').replace(GIT_API_BASE_URL, GIT_UI_BASE_URL).replace("repos/","")
         sheet2[f'C{i}'] = pr_json.get('body')
         sheet2[f'D{i}'] = pr_json.get('created_at')
         sheet2[f'E{i}'] = pr_json.get('author')
-        sheet2[f'F{i}'] = pr_json.get('author_url')
+        sheet2[f'F{i}'] = pr_json.get('author_url').replace(GIT_API_BASE_URL, GIT_UI_BASE_URL).replace("users/", "")
         sheet2[f'G{i}'] = pr_json.get('head_repo')
         sheet2[f'H{i}'] = pr_json.get('head_ref')
         sheet2[f'I{i}'] = pr_json.get('title')
         sheet2[f'J{i}'] = pr_json.get('merge_by')
-        sheet2[f'K{i}'] = pr_json.get('merge_user_url')
+        sheet2[f'K{i}'] = pr_json.get('merge_user_url').replace(GIT_API_BASE_URL, GIT_UI_BASE_URL).replace("users/", "")
         sheet2[f'L{i}'] = pr_json.get('merged_at')
         sheet2[f'M{i}'] = pr_json.get('target_ref')
         sheet2[f'N{i}'] = pr_json.get('target_repo')
@@ -313,7 +314,7 @@ def lookup_and_update_evidence(workspace_id, evidence_id, api_key, file_path):
         description = data.get('description')
 
         # 2. Update the evidence (using the provided file_path)
-        url = f"{API_BASE_URL}/public/workspaces/{workspace_id}/evidence-library/{evidence_id}"
+        url = f"{DRATA_API_BASE_URL}/public/workspaces/{workspace_id}/evidence-library/{evidence_id}"
         mime_type, _ = mimetypes.guess_type(file_path)
         with open(file_path, 'rb') as file:
             files = {
@@ -341,7 +342,7 @@ def lookup_and_update_evidence(workspace_id, evidence_id, api_key, file_path):
 
 
 def get_workspace_details(evidence_id, workspace_id, drata_api_key):
-    url = f"{API_BASE_URL}/public/workspaces/{workspace_id}/evidence-library/{evidence_id}"
+    url = f"{DRATA_API_BASE_URL}/public/workspaces/{workspace_id}/evidence-library/{evidence_id}"
 
     headers = {'Authorization': f'Bearer {drata_api_key}'}
 
@@ -420,9 +421,9 @@ def get_token_git_app():
     return response.json()['token']
 
 
-# token = get_token_git_app()
-# config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main"}]
-# for config in config_json:
-#     repo_details = get_branch_config_details(token, config)
-#     pr_logs = fetch_pull_requests(token, config)
-#     create_xlsx_update_evidence(repo_details, pr_logs, config)
+token = get_token_git_app()
+config_json = [{"owner": "malinda-peiris", "project": "facemymelody", "branch": "main"}]
+for config in config_json:
+    repo_details = get_branch_config_details(token, config)
+    pr_logs = fetch_pull_requests(token, config)
+    create_xlsx_update_evidence(repo_details, pr_logs, config)
