@@ -281,7 +281,7 @@ def create_xlsx_update_evidence(repo_details, pr_logs, config):
 
     for i, (pr_json) in enumerate(pr_logs_json, start=2):  # Start at row 2
         sheet2[f'A{i}'] = pr_json.get('number')
-        sheet2[f'B{i}'] = pr_json.get('url').replace(GIT_API_BASE_URL, GIT_UI_BASE_URL).replace("repos/","")
+        sheet2[f'B{i}'] = pr_json.get('url').replace(GIT_API_BASE_URL, GIT_UI_BASE_URL).replace("repos/","").replace("pulls","pull")
         sheet2[f'C{i}'] = pr_json.get('body')
         sheet2[f'D{i}'] = pr_json.get('created_at')
         sheet2[f'E{i}'] = pr_json.get('author')
